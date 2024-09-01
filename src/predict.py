@@ -16,16 +16,24 @@ from shared import get_num_classes, get_transforms
 def predict_and_recommend(model, image_path, label_encoder, features, labels, top_k=5):
     transform = get_transforms()
     image = Image.open(image_path).convert("RGB")
-    image = transform(image).unsqueeze(0).to(device)
+    image_tensor = transform(image).unsqueeze(0).to(device)
+
     with torch.no_grad():
-        output = model(image)
+        output = model(image_tensor)
         _, predicted = torch.max(output, 1)
     predicted_model = label_encoder.inverse_transform(predicted.cpu().numpy())[0]
-
-    input_features = model.extract_features(image).cpu().numpy()
-
+    
+    input_features = model.extract_features(image_tensor).cpu().numpy()
     similar_labels = find_similar_shoes(input_features, features, labels, top_k)
     similar_models = label_encoder.inverse_transform(similar_labels)
+    
+    class_idx = predicted.item()
+    heatmap = generate_gradcam_heatmap(model, image_tensor, class_idx)
+    
+    plt.imshow(heatmap, cmap='jet', alpha=0.5)
+    plt.axis('off')
+    plt.title(f"Grad-CAM Heatmap for {predicted_model}")
+    plt.show()
     
     return predicted_model, similar_models
 
