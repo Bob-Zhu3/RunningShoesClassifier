@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 from torchvision import models
 
@@ -9,3 +10,10 @@ class ShoeClassifier(nn.Module):
 
     def forward(self, x):
         return self.resnet(x)
+
+    def extract_features(self, x):
+        feature_extractor = nn.Sequential(*list(self.resnet.children())[:-1])
+        with torch.no_grad():
+            x = feature_extractor(x)
+            x = x.view(x.size(0), -1)
+        return x
